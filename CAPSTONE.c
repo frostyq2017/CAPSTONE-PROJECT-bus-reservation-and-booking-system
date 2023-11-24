@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <termios.h>
+#include <unistd.h>
 
 typedef struct user {
     char fullname[50];
@@ -16,12 +17,47 @@ char generateusername (char email[50], char username[50]) {
     }
 }
 
+int getch(void) {
+    struct termios oldattr, newattr;
+    int ch;
+    tcgetattr(STDIN_FILENO, &oldattr);
+    newattr = oldattr;
+    newattr.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newattr);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);
+    return ch;
+}
+
+void takepassword(char password[]) {
+    int i = 0;
+    char ch;
+
+    while (ch != '\n' && ch != '\r') {
+        ch = getch();
+
+        if (ch == '\b') {
+            if (i > 0) {
+                i--;
+                password[i] = '\0';
+                printf("\b");
+            }
+        } else if (i < 19) {
+            password[i] = ch;
+            printf("*");
+            i++;
+        }
+    }
+
+    password[i] = '\0';
+}
+
 void takeinput(char ch[50]) {
     fgets(ch, 50, stdin);
     ch[strlen(ch) - 1] = 0;
 }
 
-#define MAX_SEATS 30
+#define MAX_SEATS 57
 
 
 struct Bus {
@@ -34,12 +70,16 @@ struct Bus {
 
 
 void showSeats(struct Bus bus) {
-    printf("\t\t\t\t\t\nAVAILABLE SEATS\n\n");
-    for (int i = 0; i < 30; i++) {
-        if (bus.seats[i] == 0) {
+    printf("\n\n N/B: windowed seats are the end\n");
+    printf("\t\n\n");
+    for (int i = 0; i < 57; i++) {
+        if ((i % 5 == 0 || i % 5 == 4) && bus.seats[i] == 0) {
             printf("Seat %d: Availabe ", i + 1);
         } else {
             printf("Seat %d: Booked ", i + 1);
+        }
+        if (i % 5 == 4) {
+            printf("\n"); // end of row
         }
     }
     printf("\n");
@@ -54,17 +94,38 @@ void cancelSeat(struct Bus *bus, int seatNumber) {
 }
 
 void bookSeat(struct Bus *bus, int seatNumber) {
+    system("clear");
     if (bus->seats[seatNumber - 1] == 1) {
         printf("Seat %d is already booked.\n", seatNumber);
     } else {
         bus->seats[seatNumber - 1] = 1;
         printf("Seat %d booked successfully.\n", seatNumber);
+          printf("\nReceipt:\n");
+        printf("Bus Number: %d\n", bus->busNumber);
+        printf("Seat Number: %d\n", seatNumber);
+        printf("Price: ksh 1000\n");
+
+         // Update bus number
+        int busNumber = bus->busNumber;
+        loadData(bus, busNumber - 1);
+        bus = &bus[busNumber - 1];
     }
+//save booking details to file
+     char filename[20];
+        sprintf(filename, "savedata.txt");
+        FILE *file = fopen(filename, "a");
+        if (file != NULL) {
+            fprintf(file, "Bus Number: %d, Seat Number: %d\n", bus->busNumber, seatNumber);
+            fclose(file);
+            printf("Booking details saved successfully.\n");
+        } else {
+            printf("Unable to save booking details.\n");
+        }
 }
 
 void saveData(struct Bus *buslist, int busIndex) {
     char filename[20];
-    sprintf(filename, "bus%d.txt", buslist[busIndex].busNumber);
+    sprintf(filename, "savedata%d.txt", buslist[busIndex].busNumber);
 
     FILE *file = fopen(filename, "w");
     if (file != NULL) {
@@ -80,7 +141,7 @@ void saveData(struct Bus *buslist, int busIndex) {
 
 void loadData(struct Bus *buslist, int busIndex) {
     char filename[20];
-    sprintf(filename, "bus%d.txt", buslist[busIndex].busNumber);
+    sprintf(filename, "savedata%d.txt", buslist[busIndex].busNumber);
 
     FILE *file = fopen(filename, "r");
     if (file != NULL) {
@@ -155,7 +216,7 @@ void cancel(){
     switch(choice){
         case 'Y':
 
-           
+
             printf("\n\n\n\t\t\t THANKYOU FOR CHOOSING OUR SYSTEM");
 
             break;
@@ -167,11 +228,9 @@ void cancel(){
                 printf("Invalid choice. Please enter a number between 1 and 2.\n");
 
     }
-
-
-
-
 }
+
+
 void showbus();
 void Booking(struct Bus *buslist, int busIndex) {
 
@@ -209,7 +268,7 @@ int login() {
 
         int num;
         do{
-        
+
         printf("\n\n\n");
         printf("====================================== WELCOME TO BUS RESERVATION SYSTEM ======================================\n\n\n");
         printf("\t\t\t\t\t[1]=> View Bus List\n");
@@ -234,21 +293,23 @@ int login() {
             case 3:
                 cancelBooking(busList, 0);
                 break;
+
             case 4:
                 cancel();
 
                 break;
+
             default:
                 printf("Invalid choice!\n");
                 break;
          }
-             
+
               }while(num != 5);
-                 
+
                 printf("\t----------------------------------------------------------------------------------------------------------\n");
                 printf("\t\t\t\t\tThank You For Using This System\t\t\t\t\t\t\n");
                  printf("\t----------------------------------------------------------------------------------------------------------\n");
-                
+
 
             loadData(busList, 0);
 
@@ -264,13 +325,14 @@ int main() {
     struct user user;
     FILE *fp;
 
-    printf("\t\t=+=+=+=+=+=+=++=+=+=+  WELCOME TO THE BUS BOOKING AND RESERVATION SYSTEM=+=+=+=+=+=+=+=+=+=+=+\n");
-    printf("\n\t\t\t\t\t please choose your operation\n");
-    printf("\t\t\t\t\t ----------------------------");
-    printf("\n \t\t\t\t\t => 1.Login\n");
-    printf("\n \t\t\t\t\t => 2.Exit\n");
 
-    printf("\n\nYour choice: ");
+    printf("=+=+=+=+=+=+=++=WELCOME TO THE BUS BOOKING AND RESERVATION SYSTEM=+=+=+=+=+=+=+\n");
+    printf("\n\t\t\ please choose your operation\n");
+    printf("\t\t\ ----------------------------");
+    printf("\n \t\t\t\ => 1.Login\n");
+    printf("\n \t\t\t\ => 2.Exit\n");
+
+    printf("\n\n\t\t\Your choice: ");
     scanf("%d", &opt);
     fgetc(stdin);
 
@@ -284,7 +346,8 @@ int main() {
             printf("\n    Enter your email:-  ");
             takeinput(user.email);
             printf("\n    Enter your password:-  ");
-            takeinput(user.password);
+            takepassword(user.password);
+            printf("%s",user.password);
 
             system("clear");
             generateusername(user.email,user.username);
@@ -293,8 +356,8 @@ int main() {
             printf ("\n\n user registration succcessful :) \n") ;
             printf("\n\n Your username is  %s",user.username);
             } else {
-        
-            
+
+
             printf("\n\n Sorry! Something went wrong :(") ;
 
             printf("  \n\n ---------------------  WELCOME TO OUR SYSTEM --------------------------");
@@ -331,5 +394,4 @@ int main() {
     }
 
 }
-
 
