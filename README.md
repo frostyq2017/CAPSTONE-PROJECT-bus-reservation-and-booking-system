@@ -24,7 +24,7 @@ Generate a receipt for successful bookings.
 
 Login
 -----
-To access the system, users need to log in with valid credentials. After successful authentication, the main menu will be displayed.
+To access the system, users need to log in with valid credentials; such as your fullnames, email and password. After successful authentication, the main menu will be displayed.
 
 Booking Process
 ---------------
