@@ -1,0 +1,1 @@
+have a file named savedata.txt, where the program is able to load the seats
