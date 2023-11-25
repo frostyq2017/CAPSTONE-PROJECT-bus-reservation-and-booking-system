@@ -1,4 +1,4 @@
-# LINUX-bus-reservation-and-booking-system
+# Bus-Reservation-and-Booking-System
 LINUX VERSION
 
 Bus Booking and Reservation System
